@@ -1,5 +1,6 @@
 const {registerValidation} = require("./validation")
 const User = require("../models/User")
+const bcrypt = require("bcrypt");
 
 
 
@@ -15,13 +16,20 @@ const getUsers = async (req, res) => {
     }
 }
 
-// a is for apple b is for boy
+
 
 
 //save user
 const saveUser = async (req, res) => {
     const { error } = registerValidation(req.body);
-    let data = { name: req.body.name, email: req.body.email, password: req.body.password };
+    const {name, email, password} = req.body
+
+    //encrypt the password 
+    const hashedPwd = await bcrypt.hash(password, 10);
+
+
+
+    let data = { name, email, hashedPwd };
     
     const newUser = new User(data)
     
@@ -33,7 +41,7 @@ const saveUser = async (req, res) => {
             if (!user) throw Error("something wrong");
             res.redirect("/")
         } catch (err) {
-            return res.status(400).json({"msg" : err})
+            return res.status(500).json({"msg" : err})
         }
     }
 }
@@ -43,29 +51,35 @@ const saveUser = async (req, res) => {
 //select a user
 // Login a person
 const selectUser = async (req, res) => {
+
     const { error } = registerValidation(req.body);
-    let { name } = req.body;
-    let { password } = req.body;
-    let { email } = req.body;
-    let data = { name, password };
+    let { name, email, password } = req.body;
+
     if (error) {
-        return res.status(400).send(error.details[0].message);
+        res.status(400).send(error.details[0].message);
     } else {
+        const user = await User.findOne({ name: name }).exec()
         try {
-            const user = await User.findOne({ name: name }).exec()
-            if (!user) throw Error("could not find the user")
-            else {
-                try {
-                    if (user.password === password && user.name === name && user.email === email) {
-                        res.json({user})
-                    }
-                } catch (err) {
-                    res.send("Please try again"); 
+            if (!user) {
+                res.json({error: "could not find user"})
+            }
+            else {   
+                if (user.name === name && user.email === email) {              
+                    // evaluate password
+                    const match = await bcrypt.compare(password, user.hashedPwd)      
+                    if (match) {
+                        res.json({user}) 
+                    } else {
+                        res.json({error: "password do not match"})
+                    }                    
+                } else {
+                    res.json({error: "username and email do not match"})
+                    console.error("password do not match")
                 }
-            }            
+            }              
         } catch (err) {
-                res.send("Please try again");             
-        }
+                res.json({error: "could not find user"})              
+        }              
     }
 }
 

@@ -33,6 +33,7 @@ app.get("/", (req, res) => {
 
 
 
+
 // const MONGO_URI = "mongodb+srv://mongotut:testing123@cluster0.kogqa.mongodb.net/react-login-DB?retryWrites=true&w=majority"
 const MONGO_URI = "mongodb://localhost:27017/react-login-DB"
 
